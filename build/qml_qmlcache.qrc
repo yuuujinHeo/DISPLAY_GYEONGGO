@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<RCC>
+    <qresource prefix="/">
+        <file alias="font/lotteDreamBold.ttf">../font/lotteDreamBold.ttf</file>
+        <file alias="font/lotteDreamLight.ttf">../font/lotteDreamLight.ttf</file>
+        <file alias="image/right/output.png">../image/right/output.png</file>
+        <file alias="image/right/right_wait.png">../image/right/right_wait.png</file>
+        <file alias="image/background.png">../image/background.png</file>
+    </qresource>
+</RCC>

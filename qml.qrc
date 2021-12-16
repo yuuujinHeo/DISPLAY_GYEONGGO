@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>font/lotteDreamBold.ttf</file>
+        <file>font/lotteDreamLight.ttf</file>
+        <file>LeftItem.qml</file>
+        <file>RightItem.qml</file>
+        <file>image/right/output.png</file>
+        <file>image/right/right_wait.png</file>
+        <file>OneView.qml</file>
+        <file>image/background.png</file>
+    </qresource>
+</RCC>
