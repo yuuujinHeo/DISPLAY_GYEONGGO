@@ -26,15 +26,8 @@ typedef struct
 {
     QString transaction_number;
     QString menu;
-    int outlet_status;
-} ST_ORDER_RIGHT_INFO;
-
-typedef struct
-{
-    QString transaction_number;
-    QString menu;
-    int is_making;
-} ST_ORDER_LEFT_INFO;
+    int status_beverage;
+} ST_ORDER_INFO;
 
 
 class AdminConnector : public QObject
@@ -50,19 +43,13 @@ public:
     void generalReply(QtHttpReply *reply, QByteArray post_data);
 
     Q_INVOKABLE QString getOpMsg();
-    Q_INVOKABLE int getLeftSize();
-    Q_INVOKABLE QString getLeftPin(int num);
-    Q_INVOKABLE QString getLeftMenu(int num);
-    Q_INVOKABLE bool getLeftIsMaking(int num);
 
-    Q_INVOKABLE QString getRightPin(int outlet, int num);
-    Q_INVOKABLE QString getRightMenu(int outlet, int num);
-    Q_INVOKABLE int getRightStatus(int outlet, int num);
+    Q_INVOKABLE QString getPin(int num);
+    Q_INVOKABLE QString getMenu(int num);
+    Q_INVOKABLE int getStatus(int num);
 
-//    Q_INVOKABLE void setRightStatus(int outlet, int num, int status);
+    QVector<ST_ORDER_INFO> OrderList;
 
-    QVector<ST_ORDER_LEFT_INFO> LeftList;
-    ST_ORDER_RIGHT_INFO RightList[4][3];
     int connection_count;
     int IS_FIRST_LOADING = true;
 

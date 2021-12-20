@@ -30,7 +30,7 @@ AdminConnector::AdminConnector(QObject *parent)
     qDebug() << "test";
 
     // FOR TEST
-//    ST_ORDER_LEFT_INFO  temp1, temp2, temp3, temp4, temp5;
+//    ST_ORDER_INFO  temp1, temp2, temp3, temp4, temp5;
 //    temp1.transaction_number = "00011";
 //    temp2.transaction_number = "00012";
 //    temp3.transaction_number = "00013";
@@ -41,16 +41,17 @@ AdminConnector::AdminConnector(QObject *parent)
 //    temp3.menu = "자스민밀크티";
 //    temp4.menu = "자스민밀크티";
 //    temp5.menu = "블랙티";
-//    temp1.is_making = true;
-//    temp2.is_making = false;
-//    temp3.is_making = false;
-//    temp4.is_making = false;
-//    temp5.is_making = false;
-//    LeftList.push_back(temp1);
-//    LeftList.push_back(temp2);
-//    LeftList.push_back(temp3);
-//    LeftList.push_back(temp4);
-//    LeftList.push_back(temp5);
+//    temp1.status_beverage = 4;
+//    temp2.status_beverage = 3;
+//    temp3.status_beverage = 2;
+//    temp4.status_beverage = 1;
+//    temp5.status_beverage = 0;
+//    OrderList.push_back(temp1);
+//    OrderList.push_back(temp2);
+//    OrderList.push_back(temp3);
+//    OrderList.push_back(temp4);
+//    OrderList.push_back(temp5);
+//    QMetaObject::invokeMethod(object, "waitingReload");
 
 //    ST_ORDER_RIGHT_INFO rr1, rr2, rr3, rr4, rr5;
 //    rr1.transaction_number = "00011";
@@ -80,12 +81,21 @@ AdminConnector::AdminConnector(QObject *parent)
 void AdminConnector::onRequestReply(QtHttpRequest *request, QtHttpReply *reply){
     QByteArray rcvData = request->getRawData();
     QJsonObject json = QJsonDocument::fromJson(rcvData).object();
-
     qDebug() << json;
 
     QJsonArray waiting_array = json["WAITING_LIST"].toArray();
-    QJsonArray complete_array = json["COMPLETE_LIST"].toArray();
 
+    ////************** 배출구에 음료있어서 대기중인 상태
+    if(json["OUTLET_NOTICE"].toBool() == true){
+        QMetaObject::invokeMethod(object, "state_Wait");
+    }else{
+        QMetaObject::invokeMethod(object, "state_NonWait");
+    }
+
+    ////************** 에러 메시지
+    operation_msg = json["OPERATION_MSG"].toString();
+
+    ////************** 플랫폼 준비, 운영 상태
     if(json["PLATFORM_STATE"].toString() == "IN_OPERATING"){
         if(boba_state != 0){
             boba_state = 3;
@@ -93,8 +103,6 @@ void AdminConnector::onRequestReply(QtHttpRequest *request, QtHttpReply *reply){
     }else if(json["PLATFORM_STATE"].toString() == "IN_READY"){
         boba_state = 1;
     }
-
-    operation_msg = json["OPERATION_MSG"].toString();
 
     switch(boba_state){
     case 0: break;
@@ -113,53 +121,17 @@ void AdminConnector::onRequestReply(QtHttpRequest *request, QtHttpReply *reply){
 
 
 
-    LeftList.clear();
+    OrderList.clear();
     for(int i=0; i<waiting_array.size(); i++){
         QJsonObject temp = waiting_array[i].toObject();
-        ST_ORDER_LEFT_INFO tempLeft;
-        tempLeft.transaction_number = temp["TRANSACTION_NUMBER"].toString();
-        tempLeft.menu = temp["MENU"].toString();
-        tempLeft.is_making = temp["IS_MAKING"].toInt();
-        LeftList.push_back(tempLeft);
-        //qDebug() << tempLeft.transaction_number;
+        ST_ORDER_INFO tempOrder;
+        tempOrder.transaction_number = temp["TRANSACTION_NUMBER"].toString();
+        tempOrder.menu = temp["MENU"].toString();
+        tempOrder.status_beverage = temp["STATUS"].toInt();
+        OrderList.push_back(tempOrder);
     }
-
-
-    //qDebug()<<"DATA";
-    for(int i=0; i<4; i++){
-        for(int j=0; j<3; j++){
-            RightList[i][j].menu = "";
-            RightList[i][j].transaction_number = "";
-            RightList[i][j].outlet_status = 0;
-        }
-    }
-
-//    for(int i=0; i<4; i++){
-//        for(int j=0; j<3; j++){
-//            qDebug()<<i<<j<<RightList[i][j].outlet_status;
-//        }
-//    }
-
-    for(int i=0; i<complete_array.size(); i++){
-        QJsonObject temp = complete_array[i].toObject();
-        ST_ORDER_RIGHT_INFO tempRight;
-        tempRight.transaction_number = temp["TRANSACTION_NUMBER"].toString();
-        tempRight.menu = temp["MENU"].toString();
-        tempRight.outlet_status = temp["OUTLET_STATUS"].toInt();
-        int module_num = temp["MODULE_NUMBER"].toInt();
-        int cell_num = temp["CELL_NUMBER"].toInt();
-        //qDebug() << module_num <<","<<cell_num;
-        RightList[module_num][cell_num] = tempRight;
-    }
-
-//    for(int i=0; i<4; i++){
-//        for(int j=0; j<3; j++){
-//            qDebug()<<"1"<<i<<j<<RightList[i][j].outlet_status;
-//        }
-//    }
 
     connection_count = 0;
-
 
     // reply
     QJsonObject json_output;
@@ -168,9 +140,6 @@ void AdminConnector::onRequestReply(QtHttpRequest *request, QtHttpReply *reply){
     generalReply(reply, json_string);
 
     QMetaObject::invokeMethod(object, "waitingReload");
-    QMetaObject::invokeMethod(object, "completedReload");
-//    QMetaObject::invokeMethod(objectLeft, "waitingReload");
-//    QMetaObject::invokeMethod(objectRight, "completedReload");
 
 }
 
@@ -199,15 +168,8 @@ void AdminConnector::onCheck(){
     if(connection_count > 5){
         is_connected = false;
 
-        LeftList.clear();
-        for(int i=0; i<12; i++){
-            RightList[i/3][i%3].menu = "";
-            RightList[i/3][i%3].transaction_number = "";
-            RightList[i/3][i%3].outlet_status = 0;
-        }
-
-        QMetaObject::invokeMethod(objectLeft, "waitingReload");
-        QMetaObject::invokeMethod(objectRight, "completedReload");
+        //OrderList.clear();
+        QMetaObject::invokeMethod(object, "waitingReload");
 
     }else{
         is_connected = true;
@@ -218,42 +180,24 @@ void AdminConnector::onCheck(){
 QString AdminConnector::getOpMsg(){
     return operation_msg;
 }
-int AdminConnector::getLeftSize(){
-    return LeftList.size();
+
+QString AdminConnector::getPin(int num){
+    if(num < OrderList.size()){
+        return OrderList[num].transaction_number;
+    }
+    return "";
 }
 
-QString AdminConnector::getLeftPin(int num){
-    return LeftList[num].transaction_number;
+QString AdminConnector::getMenu(int num){
+    if(num < OrderList.size()){
+        return OrderList[num].menu;
+    }
+    return "";
 }
 
-QString AdminConnector::getLeftMenu(int num){
-    return LeftList[num].menu;
+int AdminConnector::getStatus(int num){
+    if(num < OrderList.size()){
+        return OrderList[num].status_beverage;
+    }
+    return 0;
 }
-
-bool AdminConnector::getLeftIsMaking(int num){
-    return LeftList[num].is_making;
-}
-
-QString AdminConnector::getRightPin(int outlet, int num){
-//    qDebug()<<outlet<<num<<" PIN"<<RightList[outlet][num].transaction_number;
-    return RightList[outlet][num].transaction_number;
-}
-
-QString AdminConnector::getRightMenu(int outlet, int num){
-//    qDebug()<<outlet<<num<<" MENU"<<RightList[outlet][num].menu;
-    return RightList[outlet][num].menu;
-}
-
-int AdminConnector::getRightStatus(int outlet, int num){
-//    qDebug()<<outlet<<num<<" STATUS"<<RightList[outlet][num].outlet_status;
-    return RightList[outlet][num].outlet_status;
-}
-
-//void AdminConnector::setRightStatus(int outlet, int num, int status)
-//{
-//    RightList[outlet][num].outlet_status = status;
-//}
-
-
-
-
